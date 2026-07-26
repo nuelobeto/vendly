@@ -56,8 +56,7 @@ function MobileNav() {
           <SheetClose
             render={
               <Link
-                href="/get-started"
-                prefetch={false}
+                href="/auth/register"
                 className={cn(
                   buttonVariants({ size: "lg" }),
                   "h-11 rounded-xl text-base"
@@ -70,7 +69,7 @@ function MobileNav() {
           <SheetClose
             render={
               <Link
-                href="/sign-in"
+                href="/auth/login"
                 prefetch={false}
                 className={cn(
                   buttonVariants({ variant: "outline", size: "lg" }),

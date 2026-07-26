@@ -57,8 +57,7 @@ function Hero() {
 
           <StaggerItem className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
             <Link
-              href="/get-started"
-              prefetch={false}
+              href="/auth/register"
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-11 w-full rounded-xl px-6 text-base sm:w-auto"

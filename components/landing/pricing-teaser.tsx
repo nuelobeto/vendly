@@ -127,8 +127,7 @@ function PricingTeaser() {
 
               <CardFooter>
                 <Link
-                  href="/get-started"
-                  prefetch={false}
+                  href="/auth/register"
                   className={cn(
                     buttonVariants({
                       variant: plan.featured ? "default" : "outline",
