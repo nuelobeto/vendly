@@ -47,11 +47,13 @@ function ThemeHotkey() {
         return
       }
 
-      if (event.key.toLowerCase() !== "d") {
+      if (isTypingTarget(event.target)) {
         return
       }
 
-      if (isTypingTarget(event.target)) {
+      // `key` is optional on KeyboardEvent: password-manager autofill and some
+      // IME composition events dispatch keydown without it.
+      if (event.key?.toLowerCase() !== "d") {
         return
       }
 

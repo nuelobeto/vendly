@@ -55,7 +55,7 @@ function SiteHeader() {
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
           <Link
-            href="/sign-in"
+            href="/auth/login"
             prefetch={false}
             className={cn(
               buttonVariants({ variant: "ghost", size: "lg" }),
@@ -65,8 +65,7 @@ function SiteHeader() {
             Sign in
           </Link>
           <Link
-            href="/get-started"
-            prefetch={false}
+            href="/auth/register"
             className={cn(
               buttonVariants({ size: "lg" }),
               "hidden h-10 rounded-xl px-4 sm:inline-flex"
