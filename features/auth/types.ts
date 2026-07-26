@@ -25,6 +25,8 @@ export const CONFIRM_STATUSES = [
   "success",
   "expired",
   "invalid",
+  /** PKCE verifier cookie missing — link opened on a different browser/device. */
+  "wrong_device",
   "error",
 ] as const
 

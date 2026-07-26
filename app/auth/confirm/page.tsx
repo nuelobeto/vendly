@@ -5,6 +5,7 @@ import {
   CircleCheckIcon,
   LinkIcon,
   MailWarningIcon,
+  MonitorSmartphoneIcon,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -52,6 +53,14 @@ const OUTCOMES: Record<TConfirmStatus, Outcome> = {
     title: "That link looks broken",
     body: "Some email clients split long links across lines. Try copying the whole URL into your browser, or sign up again for a new one.",
     primary: { href: "/auth/register", label: "Get a new link" },
+    secondary: { href: "/", label: "Back to home" },
+  },
+  wrong_device: {
+    icon: MonitorSmartphoneIcon,
+    tone: "error",
+    title: "Open the link on the device you signed up from",
+    body: "For security, confirmation links only work in the browser that started the signup. Open this email there — or sign up again here and we'll send a link that works on this device.",
+    primary: { href: "/auth/register", label: "Sign up on this device" },
     secondary: { href: "/", label: "Back to home" },
   },
   error: {

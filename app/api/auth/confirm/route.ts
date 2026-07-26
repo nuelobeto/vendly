@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import type { EmailOtpType } from "@supabase/supabase-js"
+import type { AuthError, EmailOtpType } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
 import type { TConfirmStatus } from "@/features/auth/types"
@@ -17,19 +17,50 @@ function isEmailOtpType(value: string | null): value is EmailOtpType {
   return !!value && EMAIL_OTP_TYPES.includes(value as EmailOtpType)
 }
 
+function statusForError(error: AuthError): TConfirmStatus {
+  // The PKCE verifier lives in a cookie set during signUp, so it is absent when
+  // the email link is opened on another browser or device.
+  if (error.code === "pkce_code_verifier_not_found") {
+    return "wrong_device"
+  }
+
+  // Supabase uses 401/403 for a consumed or timed-out one-time credential.
+  const expired =
+    error.status === 401 ||
+    error.status === 403 ||
+    error.code === "otp_expired" ||
+    error.code === "flow_state_expired" ||
+    error.code === "flow_state_not_found"
+
+  return expired ? "expired" : "error"
+}
+
 /**
- * Email confirmation callback. Supabase appends `token_hash` and `type` to the
- * `emailRedirectTo` URL; exchanging them here sets the session cookies.
+ * Email confirmation callback.
  *
- * Always redirects to /auth/confirm, which renders the outcome. The token is
- * consumed here rather than on the page so it never reaches the client and is
- * not left sitting in browser history against a rendered URL.
+ * Supabase sends one of two link shapes depending on the client's flow type,
+ * and we accept both:
+ *
+ *   PKCE  (the @supabase/ssr default)  ?code=<uuid>
+ *         → exchangeCodeForSession, which needs the code-verifier cookie set
+ *           during signUp, so the link must be opened in the same browser.
+ *
+ *   OTP   (implicit / custom templates) ?token_hash=<hash>&type=<type>
+ *         → verifyOtp. Works from any browser.
+ *
+ * The credential is consumed here rather than on the page, so it never reaches
+ * the client and is not left in history against a rendered URL.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl
+  const code = searchParams.get("code")
   const tokenHash = searchParams.get("token_hash")
   const type = searchParams.get("type")
   const next = searchParams.get("next")
+
+  // Supabase appends these when it rejects the link before we ever see it.
+  const providerError =
+    searchParams.get("error_code") ?? searchParams.get("error")
 
   // Only relative paths — an absolute `next` would be an open redirect.
   const safeNext =
@@ -44,25 +75,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (!tokenHash || !isEmailOtpType(type)) {
-    return outcome("invalid")
+  if (providerError) {
+    return outcome(providerError.includes("expired") ? "expired" : "invalid")
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({
-    type,
-    token_hash: tokenHash,
-  })
 
-  if (error) {
-    // Supabase returns 401/403 for a consumed or expired one-time token.
-    const isExpired =
-      error.status === 401 ||
-      error.status === 403 ||
-      error.code === "otp_expired"
-
-    return outcome(isExpired ? "expired" : "error")
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    return outcome(error ? statusForError(error) : "success")
   }
 
-  return outcome("success")
+  if (tokenHash && isEmailOtpType(type)) {
+    const { error } = await supabase.auth.verifyOtp({
+      type,
+      token_hash: tokenHash,
+    })
+    return outcome(error ? statusForError(error) : "success")
+  }
+
+  return outcome("invalid")
 }
