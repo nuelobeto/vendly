@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Controller, useForm } from "react-hook-form"
 import {
   AlertCircleIcon,
@@ -34,12 +35,18 @@ function ProfileForm({
   userId,
   profile,
   nextHref = "/onboarding/store",
+  redirectOnSuccess = true,
+  submitLabel,
 }: {
   userId: string
   profile: IProfileRow | null
   /** Invited teammates skip store setup and go straight to the dashboard. */
   nextHref?: string
+  /** Settings screens save in place rather than navigating onward. */
+  redirectOnSuccess?: boolean
+  submitLabel?: string
 }) {
+  const router = useRouter()
   const initialPhone = fromE164(profile?.phone)
 
   const form = useForm<ProfileFormInput>({
@@ -77,6 +84,12 @@ function ProfileForm({
       }
     },
     onSuccess: (data) => {
+      if (!redirectOnSuccess) {
+        // Settings: stay put and refresh so the new values are what's shown.
+        router.refresh()
+        return
+      }
+
       // The save may have accepted a pending invite, which settles the
       // destination more authoritatively than anything computed at render.
       window.location.assign(data.joinedStore ? "/dashboard" : nextHref)
@@ -92,7 +105,7 @@ function ProfileForm({
     })
   })
 
-  const isBusy = mutation.isPending || mutation.isSuccess
+  const isBusy = mutation.isPending || (redirectOnSuccess && mutation.isSuccess)
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
@@ -207,6 +220,8 @@ function ProfileForm({
             <Loader2Icon className="animate-spin" />
             Saving…
           </>
+        ) : submitLabel ? (
+          submitLabel
         ) : (
           <>
             Continue
@@ -214,6 +229,12 @@ function ProfileForm({
           </>
         )}
       </Button>
+
+      {!redirectOnSuccess && mutation.isSuccess ? (
+        <p aria-live="polite" className="text-center text-sm text-primary">
+          Saved.
+        </p>
+      ) : null}
     </form>
   )
 }

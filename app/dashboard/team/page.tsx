@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { getActiveStore } from "@/lib/stores/active-store"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -30,15 +31,14 @@ export default async function Page() {
 
   if (!user) redirect("/auth/login?next=/dashboard/team")
 
-  const { data: membership } = await supabase
-    .from("store_members")
-    .select("store_id, role")
-    .eq("user_id", user.id)
-    .maybeSingle()
+  // The active store, not "the" store — `.maybeSingle()` here would error for
+  // anyone belonging to two.
+  const { active } = await getActiveStore()
 
-  if (!membership) redirect("/onboarding/store")
+  if (!active) redirect("/onboarding/store")
 
-  const canInvite = membership.role === "owner" || membership.role === "admin"
+  const membership = { store_id: active.store.id, role: active.role }
+  const canInvite = active.role === "owner" || active.role === "admin"
 
   /*
    * The roster comes from get_store_team rather than a store_members ->

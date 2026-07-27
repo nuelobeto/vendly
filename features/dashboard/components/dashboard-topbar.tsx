@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/landing/theme-toggle"
 import { dashboardNav } from "@/features/dashboard/nav-config"
-import { UserMenu } from "@/features/dashboard/components/user-menu"
+import {
+  UserMenu,
+  type MenuStore,
+} from "@/features/dashboard/components/user-menu"
 
 const allNavItems = dashboardNav.flatMap((group) => group.items)
 
@@ -34,10 +37,12 @@ function DashboardTopbar({
   name,
   email,
   avatarUrl,
+  stores,
 }: {
   name: string
   email: string
   avatarUrl: string | null
+  stores: MenuStore[]
 }) {
   const pathname = usePathname()
 
@@ -51,7 +56,12 @@ function DashboardTopbar({
 
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />
-        <UserMenu name={name} email={email} avatarUrl={avatarUrl} />
+        <UserMenu
+          name={name}
+          email={email}
+          avatarUrl={avatarUrl}
+          stores={stores}
+        />
       </div>
     </header>
   )

@@ -4,6 +4,7 @@ import {
   PackageIcon,
   SettingsIcon,
   ShoppingBagIcon,
+  UserIcon,
   Users2Icon,
   UsersIcon,
   WalletIcon,
@@ -47,6 +48,7 @@ export const dashboardNav: DashboardNavGroup[] = [
         icon: ChartNoAxesColumnIcon,
       },
       { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
+      { href: "/dashboard/account", label: "My Account", icon: UserIcon },
     ],
   },
 ]

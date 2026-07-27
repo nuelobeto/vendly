@@ -32,6 +32,9 @@ export default async function Page() {
         .from("store_members")
         .select("role")
         .eq("user_id", user.id)
+        // limit(1), not maybeSingle: this only asks "do you belong to any
+        // store", and maybeSingle errors once the answer is "more than one".
+        .limit(1)
         .maybeSingle(),
       supabase.rpc("has_pending_invite"),
     ])

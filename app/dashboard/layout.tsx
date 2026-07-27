@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { getActiveStore } from "@/lib/stores/active-store"
 import { DashboardSidebar } from "@/features/dashboard/components/dashboard-sidebar"
 import { DashboardTopbar } from "@/features/dashboard/components/dashboard-topbar"
 
@@ -28,22 +29,16 @@ export default async function DashboardLayout({
   }
 
   /*
-   * Resolved through store_members, not stores.owner_id. An invited teammate
-   * belongs to a store they don't own — keying off ownership would bounce them
-   * into onboarding and have them create a second store.
+   * Resolved through membership, not stores.owner_id, and never with
+   * `.maybeSingle()` — a user can belong to more than one store, and
+   * maybeSingle *errors* on multiple rows rather than picking one.
    */
-  const [{ data: profile }, { data: membership }] = await Promise.all([
+  const [{ data: profile }, { stores, active }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase
-      .from("store_members")
-      .select("role, stores(*)")
-      .eq("user_id", user.id)
-      .maybeSingle(),
+    getActiveStore(),
   ])
 
-  const store = Array.isArray(membership?.stores)
-    ? membership?.stores[0]
-    : membership?.stores
+  const store = active?.store
 
   if (!store) {
     // An unaccepted invite means they're a teammate mid-onboarding, not a
@@ -76,6 +71,13 @@ export default async function DashboardLayout({
           name={fullName}
           email={user.email ?? ""}
           avatarUrl={profile?.avatar_url ?? null}
+          stores={stores.map((entry) => ({
+            id: entry.store.id,
+            name: entry.store.name,
+            slug: entry.store.slug,
+            role: entry.role,
+            isActive: entry.store.id === store.id,
+          }))}
         />
 
         <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">{children}</div>
