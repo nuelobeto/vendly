@@ -58,9 +58,9 @@ const OUTCOMES: Record<TConfirmStatus, Outcome> = {
   wrong_device: {
     icon: MonitorSmartphoneIcon,
     tone: "error",
-    title: "Open the link on the device you signed up from",
-    body: "For security, confirmation links only work in the browser that started the signup. Open this email there — or sign up again here and we'll send a link that works on this device.",
-    primary: { href: "/auth/register", label: "Sign up on this device" },
+    title: "This link is an older one",
+    body: "It was sent before we updated our confirmation emails, so it only opens in the browser you signed up from. Request a fresh link and it will work on any device.",
+    primary: { href: "/auth/register", label: "Send me a new link" },
     secondary: { href: "/", label: "Back to home" },
   },
   error: {

@@ -38,3 +38,6 @@ next-env.d.ts
 
 # local implementation notes
 /walkthrough
+
+# local agent settings — may hold a Supabase personal access token
+.claude/settings.local.json

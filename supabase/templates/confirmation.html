@@ -1,0 +1,41 @@
+<!--
+  Vendly — "Confirm signup" email template.
+
+  Paste into: Supabase dashboard → Authentication → Emails → Confirm signup.
+
+  WHY THIS IS CUSTOM — AND WHY IT IS NOT OPTIONAL
+  -----------------------------------------------
+  The default template uses {{ .ConfirmationURL }}, which routes through
+  Supabase's /auth/v1/verify and lands on the app carrying a PKCE `?code=`.
+  Exchanging that code requires the code-verifier cookie written during signUp,
+  so the link only works in the browser that started the signup — opening it
+  anywhere else fails with `pkce_code_verifier_not_found`.
+
+  PKCE cannot be turned off in application code. @supabase/ssr hard-codes
+  `flowType: "pkce"` *after* spreading user options, in both createServerClient
+  and createBrowserClient, so it is not overridable. Swapping this template for
+  the {{ .TokenHash }} form below is the only way to get a link that works
+  anywhere: the app verifies it with verifyOtp(), which needs no browser state.
+
+  Requires: Site URL set under Authentication → URL Configuration, and
+  {SITE_URL}/api/auth/confirm in the Redirect URLs allow-list.
+-->
+<h2>Confirm your Vendly account</h2>
+
+<p>Tap the button below to activate your account and start setting up your store.</p>
+
+<p>
+  <a
+    href="{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=signup"
+    style="display:inline-block;padding:12px 20px;border-radius:12px;background:#4556d9;color:#ffffff;font-weight:600;text-decoration:none"
+  >
+    Confirm my email
+  </a>
+</p>
+
+<p>Or paste this link into your browser:</p>
+<p>{{ .SiteURL }}/api/auth/confirm?token_hash={{ .TokenHash }}&type=signup</p>
+
+<p style="color:#71717a;font-size:14px">
+  If you didn't create a Vendly account, you can safely ignore this email.
+</p>

@@ -9,6 +9,8 @@ export type Currency = "USD" | "EUR" | "GBP" | "NGN" | "CAD" | "AUD"
 
 export type OnboardingStep = "profile" | "store" | "complete"
 
+export type StoreRole = "owner" | "admin" | "staff"
+
 export type Database = {
   public: {
     Tables: {
@@ -50,7 +52,10 @@ export type Database = {
           name: string
           slug: string
           logo_url: string | null
+          banner_url: string | null
           currency: Currency
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           updated_at: string
         }
@@ -60,7 +65,10 @@ export type Database = {
           name: string
           slug: string
           logo_url?: string | null
+          banner_url?: string | null
           currency?: Currency
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -68,7 +76,33 @@ export type Database = {
           name?: string
           slug?: string
           logo_url?: string | null
+          banner_url?: string | null
           currency?: Currency
+          contact_email?: string | null
+          contact_phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      store_members: {
+        Row: {
+          id: string
+          store_id: string
+          user_id: string
+          role: StoreRole
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          user_id: string
+          role?: StoreRole
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          role?: StoreRole
           updated_at?: string
         }
         Relationships: []
@@ -80,10 +114,23 @@ export type Database = {
         Args: { candidate: string }
         Returns: boolean
       }
+      generate_store_slug: {
+        Args: { base_name: string }
+        Returns: string
+      }
+      is_store_member: {
+        Args: { p_store_id: string }
+        Returns: boolean
+      }
+      has_store_role: {
+        Args: { p_store_id: string; p_roles: StoreRole[] }
+        Returns: boolean
+      }
     }
     Enums: {
       currency: Currency
       onboarding_step: OnboardingStep
+      store_role: StoreRole
     }
     CompositeTypes: Record<never, never>
   }

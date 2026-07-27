@@ -5,7 +5,10 @@
 -- (name, slug, logo, currency). Both tables are created here so onboarding has
 -- somewhere to write, and `profiles.onboarding_step` tracks where a user is.
 
-create extension if not exists "uuid-ossp";
+-- UUIDs come from gen_random_uuid(), which is core Postgres since 13. Do not
+-- reach for uuid_generate_v4(): on Supabase, uuid-ossp is installed into the
+-- `extensions` schema, so that function is not on the default search_path and
+-- the migration fails with "function uuid_generate_v4() does not exist".
 
 -- ---------------------------------------------------------------------------
 -- Enums
@@ -49,7 +52,7 @@ comment on table public.profiles is
 -- ---------------------------------------------------------------------------
 
 create table public.stores (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles (id) on delete cascade,
   name text not null,
   slug text not null unique,

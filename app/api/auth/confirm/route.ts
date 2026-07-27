@@ -38,15 +38,21 @@ function statusForError(error: AuthError): TConfirmStatus {
 /**
  * Email confirmation callback.
  *
- * Supabase sends one of two link shapes depending on the client's flow type,
- * and we accept both:
+ * Two link shapes are accepted:
  *
- *   PKCE  (the @supabase/ssr default)  ?code=<uuid>
- *         → exchangeCodeForSession, which needs the code-verifier cookie set
- *           during signUp, so the link must be opened in the same browser.
+ *   token_hash  ?token_hash=<hash>&type=<type>   ← what we send
+ *         → verifyOtp. Needs no browser state, so the link works from ANY
+ *           device. Produced by the custom email template in
+ *           supabase/templates/confirmation.html.
  *
- *   OTP   (implicit / custom templates) ?token_hash=<hash>&type=<type>
- *         → verifyOtp. Works from any browser.
+ *   PKCE        ?code=<uuid>
+ *         → exchangeCodeForSession, which requires the code-verifier cookie
+ *           written during signUp and therefore only works in the originating
+ *           browser. Retained for links already sitting in inboxes from before
+ *           the template change, and for OAuth later, which is PKCE by nature.
+ *
+ * token_hash is checked first: it is the expected shape and the one that works
+ * everywhere.
  *
  * The credential is consumed here rather than on the page, so it never reaches
  * the client and is not left in history against a rendered URL.
@@ -81,16 +87,16 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient()
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    return outcome(error ? statusForError(error) : "success")
-  }
-
   if (tokenHash && isEmailOtpType(type)) {
     const { error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     })
+    return outcome(error ? statusForError(error) : "success")
+  }
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
     return outcome(error ? statusForError(error) : "success")
   }
 
