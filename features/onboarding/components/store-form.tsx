@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import {
   AlertCircleIcon,
@@ -26,6 +27,7 @@ import {
 import {
   useCreateStoreMutation,
   useSlugAvailability,
+  useUpdateStoreSettingsMutation,
 } from "@/features/onboarding/hooks"
 import {
   CURRENCIES,
@@ -57,12 +59,20 @@ function useDebounced<T>(value: T, delay: number) {
 function StoreForm({
   userId,
   store,
+  mode = "onboarding",
 }: {
   userId: string
   store: IStoreRow | null
+  /**
+   * "settings" saves in place against the ACTIVE store. Onboarding creates,
+   * and resolves the store by ownership — which would make an admin editing
+   * settings create a second store of their own.
+   */
+  mode?: "onboarding" | "settings"
 }) {
   // True once the user edits the slug directly, after which we stop deriving it
   // from the name — otherwise typing the name would clobber their choice.
+  const router = useRouter()
   const [slugTouched, setSlugTouched] = React.useState(!!store?.slug)
 
   const initialContactPhone = fromE164(store?.contact_phone)
@@ -110,26 +120,39 @@ function StoreForm({
     slugFormatValid && !isOwnSlug
   )
 
-  const mutation = useCreateStoreMutation({
-    onError: (error) => {
-      const map: Record<string, keyof StoreFormInput> = {
-        name: "name",
-        slug: "slug",
-        currency: "currency",
-        logo_url: "logoUrl",
-        banner_url: "bannerUrl",
-        contact_email: "contactEmail",
-        contact_phone: "contactPhoneNumber",
-      }
-      for (const [field, message] of Object.entries(error.fieldErrors ?? {})) {
-        const target = map[field]
-        if (target) setError(target, { message })
-      }
-    },
+  const isSettings = mode === "settings"
+
+  const onError = (error: { fieldErrors?: Record<string, string> }) => {
+    const map: Record<string, keyof StoreFormInput> = {
+      name: "name",
+      slug: "slug",
+      currency: "currency",
+      logo_url: "logoUrl",
+      banner_url: "bannerUrl",
+      contact_email: "contactEmail",
+      contact_phone: "contactPhoneNumber",
+    }
+    for (const [field, message] of Object.entries(error.fieldErrors ?? {})) {
+      const target = map[field]
+      if (target) setError(target, { message })
+    }
+  }
+
+  const createMutation = useCreateStoreMutation({
+    onError,
     onSuccess: () => {
       window.location.assign("/onboarding/complete")
     },
   })
+
+  const settingsMutation = useUpdateStoreSettingsMutation({
+    onError,
+    // Stay put and refresh, so the form shows what was actually saved —
+    // including a slug the server may have kept rather than regenerated.
+    onSuccess: () => router.refresh(),
+  })
+
+  const mutation = isSettings ? settingsMutation : createMutation
 
   const onSubmit = handleSubmit((values) => {
     mutation.mutate({
@@ -144,7 +167,7 @@ function StoreForm({
     })
   })
 
-  const isBusy = mutation.isPending || mutation.isSuccess
+  const isBusy = mutation.isPending || (!isSettings && mutation.isSuccess)
   const taken = availability.data === false
   // Block submit while a check is in flight so we can't race past a taken slug.
   const blocked =
@@ -382,11 +405,23 @@ function StoreForm({
           </>
         ) : (
           <>
-            {store ? "Save and continue" : "Create my store"}
-            <ArrowRightIcon className="transition-transform group-hover/button:translate-x-0.5" />
+            {isSettings ? (
+              "Save changes"
+            ) : (
+              <>
+                {store ? "Save and continue" : "Create my store"}
+                <ArrowRightIcon className="transition-transform group-hover/button:translate-x-0.5" />
+              </>
+            )}
           </>
         )}
       </Button>
+
+      {isSettings && mutation.isSuccess ? (
+        <p aria-live="polite" className="text-center text-sm text-primary">
+          Saved.
+        </p>
+      ) : null}
     </form>
   )
 }
