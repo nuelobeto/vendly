@@ -168,3 +168,46 @@ export async function createStore(payload: IStore): Promise<IStoreSuccess> {
     throw new AuthError("Something went wrong. Please try again.")
   }
 }
+
+/** Settings edits go to the active store; see the route for why it's separate. */
+export async function updateStoreSettings(
+  payload: IStore
+): Promise<IStoreSuccess> {
+  try {
+    const { data } = await apiClient.patch<IStoreResponse>(
+      "/stores/settings",
+      payload
+    )
+
+    if (!data.ok) {
+      throw new AuthError(data.error, { fieldErrors: data.fieldErrors })
+    }
+
+    return data
+  } catch (error) {
+    if (error instanceof AuthError) throw error
+
+    if (axios.isAxiosError<IStoreResponse>(error)) {
+      const body = error.response?.data
+
+      if (body && !body.ok) {
+        throw new AuthError(body.error, {
+          fieldErrors: body.fieldErrors,
+          status: error.response?.status,
+        })
+      }
+
+      if (!error.response) {
+        throw new AuthError(
+          "Network error. Check your connection and try again."
+        )
+      }
+
+      throw new AuthError("Could not save your changes. Please try again.", {
+        status: error.response.status,
+      })
+    }
+
+    throw new AuthError("Something went wrong. Please try again.")
+  }
+}

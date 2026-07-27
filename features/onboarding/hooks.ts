@@ -11,6 +11,7 @@ import {
   checkSlugAvailability,
   createStore,
   updateProfile,
+  updateStoreSettings,
   uploadImage,
 } from "@/features/onboarding/services"
 import type {
@@ -26,6 +27,7 @@ export const onboardingKeys = {
   profile: () => [...onboardingKeys.all, "profile"] as const,
   image: () => [...onboardingKeys.all, "image"] as const,
   store: () => [...onboardingKeys.all, "store"] as const,
+  storeSettings: () => [...onboardingKeys.all, "store-settings"] as const,
   slug: (candidate: string) =>
     [...onboardingKeys.all, "slug", candidate] as const,
 }
@@ -88,5 +90,19 @@ export function useSlugAvailability(candidate: string, enabled: boolean) {
     // Availability can change under us; never serve a stale "available".
     staleTime: 0,
     retry: false,
+  })
+}
+
+export function useUpdateStoreSettingsMutation(
+  options?: Omit<
+    UseMutationOptions<IStoreSuccess, AuthError, IStore>,
+    "mutationFn" | "mutationKey"
+  >
+) {
+  return useMutation<IStoreSuccess, AuthError, IStore>({
+    mutationKey: onboardingKeys.storeSettings(),
+    mutationFn: updateStoreSettings,
+    retry: false,
+    ...options,
   })
 }
