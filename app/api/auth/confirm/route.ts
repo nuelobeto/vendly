@@ -73,6 +73,17 @@ export async function GET(request: NextRequest) {
     next && next.startsWith("/") && !next.startsWith("//") ? next : undefined
 
   const outcome = (status: TConfirmStatus) => {
+    /*
+     * Password recovery goes straight to the form. An interstitial reading
+     * "Email confirmed — continue setup" is simply the wrong screen for
+     * someone who clicked "reset my password".
+     */
+    if (status === "success" && type === "recovery") {
+      return NextResponse.redirect(
+        new URL(safeNext ?? "/auth/reset-password", origin)
+      )
+    }
+
     const url = new URL("/auth/confirm", origin)
     url.searchParams.set("status", status)
     if (status === "success" && safeNext) {
