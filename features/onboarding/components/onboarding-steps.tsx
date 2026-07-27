@@ -7,10 +7,14 @@ const STEPS = [
   { key: "store", label: "Your store" },
 ] as const
 
-type StepKey = (typeof STEPS)[number]["key"]
+type StepKey = (typeof STEPS)[number]["key"] | "done"
 
 function OnboardingSteps({ current }: { current: StepKey }) {
-  const currentIndex = STEPS.findIndex((step) => step.key === current)
+  // "done" sits past the last step, so every step renders as complete.
+  const currentIndex =
+    current === "done"
+      ? STEPS.length
+      : STEPS.findIndex((step) => step.key === current)
 
   return (
     <ol className="flex items-center justify-center gap-3">

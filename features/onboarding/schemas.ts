@@ -95,10 +95,156 @@ export const profileFormSchema = z
 
 export type ProfileFormInput = z.infer<typeof profileFormSchema>
 
-export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
-export const AVATAR_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/avif",
-]
+export const UPLOAD_BUCKETS = [
+  "avatars",
+  "store-logos",
+  "store-banners",
+] as const
+export type UploadBucket = (typeof UPLOAD_BUCKETS)[number]
+
+const RASTER = ["image/jpeg", "image/png", "image/webp", "image/avif"]
+
+/** Mirrors each bucket's `allowed_mime_types`, which Storage enforces too. */
+export const IMAGE_MIME_TYPES: Record<UploadBucket, string[]> = {
+  avatars: RASTER,
+  // Logos are often vector; banners are photographs, so no SVG there.
+  "store-logos": [...RASTER, "image/svg+xml"],
+  "store-banners": RASTER,
+}
+
+/** Mirrors each bucket's `file_size_limit`. A wide banner needs more headroom. */
+export const IMAGE_MAX_BYTES: Record<UploadBucket, number> = {
+  avatars: 2 * 1024 * 1024,
+  "store-logos": 2 * 1024 * 1024,
+  "store-banners": 5 * 1024 * 1024,
+}
+
+export function formatMaxSize(bucket: UploadBucket) {
+  return `${IMAGE_MAX_BYTES[bucket] / (1024 * 1024)} MB`
+}
+
+// ---------------------------------------------------------------------------
+// Store step
+// ---------------------------------------------------------------------------
+
+/** Mirrors the `currency` enum in the database. */
+export const CURRENCIES = [
+  { code: "USD", label: "US Dollar (USD)" },
+  { code: "EUR", label: "Euro (EUR)" },
+  { code: "GBP", label: "British Pound (GBP)" },
+  { code: "NGN", label: "Nigerian Naira (NGN)" },
+  { code: "CAD", label: "Canadian Dollar (CAD)" },
+  { code: "AUD", label: "Australian Dollar (AUD)" },
+] as const
+
+export const DEFAULT_CURRENCY = "USD"
+
+export const SLUG_MIN_LENGTH = 3
+export const SLUG_MAX_LENGTH = 63
+
+/** Mirrors the `stores_slug_format` CHECK constraint exactly. */
+export const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$/
+
+/**
+ * Derives a candidate slug from a store name. Strips accents so "Café Noir"
+ * becomes "cafe-noir" rather than losing the character entirely.
+ */
+export function slugify(name: string) {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, SLUG_MAX_LENGTH)
+    .replace(/-+$/g, "")
+}
+
+const slug = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(SLUG_MIN_LENGTH, `Use at least ${SLUG_MIN_LENGTH} characters`)
+  .max(SLUG_MAX_LENGTH, `Use ${SLUG_MAX_LENGTH} characters or fewer`)
+  .regex(
+    SLUG_PATTERN,
+    "Use lowercase letters, numbers and hyphens, starting and ending with a letter or number"
+  )
+
+/**
+ * What the API accepts and writes to `stores`.
+ *
+ * `slug` is optional: blank means "derive it from the name", which the server
+ * does via the generate_store_slug RPC so uniqueness and reserved words are
+ * settled authoritatively rather than guessed at on the client.
+ */
+export const storeSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Store name must be at least 2 characters")
+    .max(120, "Store name must be 120 characters or fewer"),
+  slug: z.union([slug, z.literal("")]).optional(),
+  currency: z.enum(CURRENCIES.map((c) => c.code) as [string, ...string[]]),
+  logo_url: z.url("Invalid logo URL").nullable().optional(),
+  banner_url: z.url("Invalid banner URL").nullable().optional(),
+  contact_email: z
+    .union([z.email("Enter a valid email address"), z.literal("")])
+    .nullable()
+    .optional(),
+  contact_phone: z
+    .union([
+      z
+        .string()
+        .regex(E164, "Enter a valid phone number including country code"),
+      z.literal(""),
+    ])
+    .nullable()
+    .optional(),
+})
+
+export type StoreInput = z.infer<typeof storeSchema>
+
+export const storeFormSchema = z
+  .object({
+    name: storeSchema.shape.name,
+    slug: z.string().trim().toLowerCase(),
+    currency: storeSchema.shape.currency,
+    logoUrl: z.string().nullable(),
+    bannerUrl: z.string().nullable(),
+    contactEmail: z.string().trim(),
+    contactDialCode: z.string().min(1),
+    contactPhoneNumber: z.string().trim(),
+  })
+  .superRefine((data, ctx) => {
+    // Blank is allowed — the server generates one from the name.
+    if (data.slug && !SLUG_PATTERN.test(data.slug)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["slug"],
+        message:
+          "Use lowercase letters, numbers and hyphens, at least 3 characters",
+      })
+    }
+
+    if (data.contactEmail && !z.email().safeParse(data.contactEmail).success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["contactEmail"],
+        message: "Enter a valid email address",
+      })
+    }
+
+    if (
+      data.contactPhoneNumber.trim() &&
+      !E164.test(toE164(data.contactDialCode, data.contactPhoneNumber))
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["contactPhoneNumber"],
+        message: "Enter a valid phone number for the selected country",
+      })
+    }
+  })
+
+export type StoreFormInput = z.infer<typeof storeFormSchema>

@@ -2,7 +2,12 @@
 
 import * as React from "react"
 import { Controller, useForm } from "react-hook-form"
-import { AlertCircleIcon, ArrowRightIcon, Loader2Icon } from "lucide-react"
+import {
+  AlertCircleIcon,
+  ArrowRightIcon,
+  CameraIcon,
+  Loader2Icon,
+} from "lucide-react"
 
 import { zodResolver } from "@/lib/forms/zod-resolver"
 import { Button } from "@/components/ui/button"
@@ -23,7 +28,7 @@ import {
   type ProfileFormInput,
 } from "@/features/onboarding/schemas"
 import type { IProfileRow } from "@/features/onboarding/types"
-import { AvatarUpload } from "@/features/onboarding/components/avatar-upload"
+import { ImageUpload } from "@/features/onboarding/components/image-upload"
 
 function ProfileForm({
   userId,
@@ -100,11 +105,17 @@ function ProfileForm({
         control={control}
         name="avatarUrl"
         render={({ field }) => (
-          <AvatarUpload
+          <ImageUpload
+            bucket="avatars"
             userId={userId}
             value={field.value}
             onChange={field.onChange}
             disabled={isBusy}
+            shape="circle"
+            icon={<CameraIcon className="size-7 text-muted-foreground" />}
+            addLabel="Add a photo"
+            changeLabel="Change photo"
+            hint="Optional · JPG, PNG or WebP · max 2 MB"
           />
         )}
       />
