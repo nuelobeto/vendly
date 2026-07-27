@@ -37,3 +37,27 @@ export type TConfirmStatus = (typeof CONFIRM_STATUSES)[number]
 export function isConfirmStatus(value: unknown): value is TConfirmStatus {
   return CONFIRM_STATUSES.includes(value as TConfirmStatus)
 }
+
+export interface ILogin {
+  email: string
+  password: string
+  next?: string
+}
+
+export type ILoginResponse =
+  | { ok: true; redirectTo: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> }
+
+export type ILoginSuccess = Extract<ILoginResponse, { ok: true }>
+
+export interface IForgotPassword {
+  email: string
+}
+
+export interface IResetPassword {
+  password: string
+}
+
+export type ISimpleAuthResponse =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> }

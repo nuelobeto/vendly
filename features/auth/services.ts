@@ -3,9 +3,15 @@ import axios from "axios"
 import { apiClient } from "@/lib/api-client"
 import type {
   IAuthError,
+  IForgotPassword,
+  ILogin,
+  ILoginResponse,
+  ILoginSuccess,
   IRegister,
   IRegisterResponse,
   IRegisterSuccess,
+  IResetPassword,
+  ISimpleAuthResponse,
 } from "@/features/auth/types"
 
 /**
@@ -70,4 +76,82 @@ export async function register(payload: IRegister): Promise<IRegisterSuccess> {
 
     throw new AuthError("Something went wrong. Please try again.")
   }
+}
+
+/** Shared unwrapping for the `{ ok }` envelope every auth route returns. */
+async function post<T extends { ok: boolean }>(
+  path: string,
+  payload: unknown,
+  fallback: string
+): Promise<Extract<T, { ok: true }>> {
+  try {
+    const { data } = await apiClient.post<T>(path, payload)
+
+    if (!data.ok) {
+      const body = data as Extract<T, { ok: false }> & {
+        error: string
+        fieldErrors?: Record<string, string>
+      }
+      throw new AuthError(body.error, { fieldErrors: body.fieldErrors })
+    }
+
+    return data as Extract<T, { ok: true }>
+  } catch (error) {
+    if (error instanceof AuthError) throw error
+
+    if (
+      axios.isAxiosError<{
+        ok: false
+        error: string
+        fieldErrors?: Record<string, string>
+      }>(error)
+    ) {
+      const body = error.response?.data
+
+      if (body && !body.ok) {
+        throw new AuthError(body.error, {
+          fieldErrors: body.fieldErrors,
+          status: error.response?.status,
+        })
+      }
+
+      if (error.code === "ECONNABORTED") {
+        throw new AuthError("That took too long. Please try again.")
+      }
+
+      if (!error.response) {
+        throw new AuthError(
+          "Network error. Check your connection and try again."
+        )
+      }
+
+      throw new AuthError(fallback, { status: error.response.status })
+    }
+
+    throw new AuthError("Something went wrong. Please try again.")
+  }
+}
+
+export function login(payload: ILogin) {
+  return post<ILoginResponse>(
+    "/auth/login",
+    payload,
+    "Could not sign you in. Please try again."
+  ) as Promise<ILoginSuccess>
+}
+
+export function forgotPassword(payload: IForgotPassword) {
+  return post<ISimpleAuthResponse>(
+    "/auth/forgot-password",
+    payload,
+    "Could not send that email. Please try again."
+  )
+}
+
+export function resetPassword(payload: IResetPassword) {
+  return post<ISimpleAuthResponse>(
+    "/auth/reset-password",
+    payload,
+    "Could not update your password. Please try again."
+  )
 }

@@ -63,3 +63,46 @@ export function scorePassword(password: string): number {
 
   return Math.min(score, 4)
 }
+
+// ---------------------------------------------------------------------------
+// Sign in
+// ---------------------------------------------------------------------------
+
+const emailField = registerSchema.shape.email
+const passwordField = registerSchema.shape.password
+
+export const loginSchema = z.object({
+  email: emailField,
+  // Deliberately NOT the full password policy: an existing account may predate
+  // a rules change, and telling someone their stored password is "invalid"
+  // while refusing to try it is nonsense.
+  password: z.string().min(1, "Password is required"),
+  next: z.string().optional(),
+})
+
+export type LoginInput = z.infer<typeof loginSchema>
+
+// ---------------------------------------------------------------------------
+// Password reset
+// ---------------------------------------------------------------------------
+
+export const forgotPasswordSchema = z.object({ email: emailField })
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+
+/** Applied when setting a NEW password, so the full policy does apply here. */
+export const resetPasswordSchema = z.object({ password: passwordField })
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
+
+export const resetPasswordFormSchema = z
+  .object({
+    password: passwordField,
+    confirmPassword: z.string().min(1, "Confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  })
+
+export type ResetPasswordFormInput = z.infer<typeof resetPasswordFormSchema>

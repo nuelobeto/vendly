@@ -97,8 +97,26 @@ export async function updateSession(request: NextRequest) {
 
   if (user && AUTH_PREFIXES.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
-    url.pathname = "/onboarding/profile"
-    url.search = ""
+
+    /*
+     * Honour `next` so someone already signed in who follows an invite link
+     * still lands on the invite rather than being dumped on the dashboard.
+     *
+     * Otherwise go to /dashboard, not straight to onboarding: the dashboard
+     * layout already decides between onboarding and the shell based on
+     * membership and pending invites, and duplicating that here would give two
+     * sources of truth that can disagree.
+     */
+    const requested = request.nextUrl.searchParams.get("next")
+    const target =
+      requested && requested.startsWith("/") && !requested.startsWith("//")
+        ? requested
+        : "/dashboard"
+
+    url.pathname = target.split("?")[0]
+    url.search = target.includes("?")
+      ? `?${target.split("?").slice(1).join("?")}`
+      : ""
     return finalize(NextResponse.redirect(url))
   }
 
