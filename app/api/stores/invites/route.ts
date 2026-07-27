@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getEnv } from "@/lib/env"
 import { createClient } from "@/lib/supabase/server"
+import { getActiveStore } from "@/lib/stores/active-store"
 import { generateInviteToken } from "@/lib/tokens"
 import { sendInviteEmail } from "@/lib/email/send-invite"
 import { inviteSchema } from "@/features/members/schemas"
@@ -59,13 +60,16 @@ export async function POST(request: NextRequest) {
 
   const { email, role } = parsed.data
 
-  // Membership is visible to members only, so this doubles as an authz check.
-  const { data: membership } = await supabase
-    .from("store_members")
-    .select("store_id, role")
-    .eq("user_id", user.id)
-    .in("role", ["owner", "admin"])
-    .maybeSingle()
+  /*
+   * Invites go to the ACTIVE store. Resolved through the shared helper rather
+   * than `.maybeSingle()`, which errors for anyone in more than one store —
+   * and picking an arbitrary row would silently invite into the wrong one.
+   */
+  const { active } = await getActiveStore()
+  const membership =
+    active && (active.role === "owner" || active.role === "admin")
+      ? { store_id: active.store.id, role: active.role }
+      : null
 
   if (!membership) {
     return NextResponse.json<IInviteResponse>(

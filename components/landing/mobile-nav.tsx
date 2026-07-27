@@ -36,10 +36,17 @@ function MobileNav() {
           </SheetDescription>
         </SheetHeader>
 
+        {/*
+          Every SheetClose here renders a <Link>, i.e. an <a>. Dialog.Close
+          assumes a native <button> (nativeButton defaults to true), so it must
+          be told otherwise or Base UI warns and applies button semantics an
+          anchor doesn't want.
+        */}
         <nav aria-label="Mobile" className="flex flex-col px-4">
           {mainNav.map((item) => (
             <SheetClose
               key={item.href}
+              nativeButton={false}
               render={
                 <Link
                   href={item.href}
@@ -54,6 +61,7 @@ function MobileNav() {
 
         <div className="mt-auto flex flex-col gap-2 p-4">
           <SheetClose
+            nativeButton={false}
             render={
               <Link
                 href="/auth/register"
@@ -67,6 +75,7 @@ function MobileNav() {
             Get started
           </SheetClose>
           <SheetClose
+            nativeButton={false}
             render={
               <Link
                 href="/auth/login"

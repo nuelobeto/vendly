@@ -35,6 +35,7 @@ export default async function Page() {
       .from("store_members")
       .select("role")
       .eq("user_id", user.id)
+      .limit(1)
       .maybeSingle(),
     supabase.rpc("has_pending_invite"),
   ])
