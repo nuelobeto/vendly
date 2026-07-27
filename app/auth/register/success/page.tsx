@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Check your email",
   description:
     "Confirm your email address to finish creating your Vendly account.",
+  robots: { index: false, follow: false },
 }
 
 export default async function Page({

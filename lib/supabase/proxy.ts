@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
+import type { AuthError } from "@supabase/supabase-js"
 
 import { getEnv } from "@/lib/env"
 import type { Database } from "@/lib/supabase/types"
@@ -9,6 +10,23 @@ const PROTECTED_PREFIXES = ["/onboarding", "/dashboard"]
 
 /** Auth pages a signed-in user should be bounced away from. */
 const AUTH_PREFIXES = ["/auth/register", "/auth/login"]
+
+/** `sb-<ref>-auth-token`, plus the `.0`/`.1` chunks used for large sessions. */
+const AUTH_COOKIE_PATTERN = /^sb-.+-auth-token(\.\d+)?$/
+
+/**
+ * A session whose refresh token the server no longer recognises. The cookies
+ * can never recover on their own, and the browser replays them on every single
+ * request — so without clearing them this errors forever.
+ */
+function isStaleSessionError(error: AuthError) {
+  return (
+    error.code === "refresh_token_not_found" ||
+    error.code === "refresh_token_already_used" ||
+    error.code === "session_not_found" ||
+    (error.status === 400 && /refresh token/i.test(error.message))
+  )
+}
 
 /**
  * Refreshes the Supabase session on every matched request and writes rotated
@@ -46,7 +64,27 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser()
+
+  const staleSession = !!error && isStaleSessionError(error)
+
+  /**
+   * Expire dead auth cookies on whichever response we end up returning, so the
+   * next request arrives clean and the app self-heals in one hop. Done by hand
+   * rather than via `signOut()`: that re-enters the failing session path and
+   * may make a network call, neither of which belongs in a proxy.
+   */
+  const finalize = (result: NextResponse) => {
+    if (staleSession) {
+      for (const { name } of request.cookies.getAll()) {
+        if (AUTH_COOKIE_PATTERN.test(name)) {
+          result.cookies.set(name, "", { maxAge: 0, path: "/" })
+        }
+      }
+    }
+    return result
+  }
 
   const { pathname } = request.nextUrl
 
@@ -54,15 +92,15 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/auth/login"
     url.searchParams.set("next", pathname)
-    return NextResponse.redirect(url)
+    return finalize(NextResponse.redirect(url))
   }
 
   if (user && AUTH_PREFIXES.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = "/onboarding/profile"
     url.search = ""
-    return NextResponse.redirect(url)
+    return finalize(NextResponse.redirect(url))
   }
 
-  return response
+  return finalize(response)
 }
