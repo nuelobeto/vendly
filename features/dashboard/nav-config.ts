@@ -4,6 +4,7 @@ import {
   PackageIcon,
   SettingsIcon,
   ShoppingBagIcon,
+  Users2Icon,
   UsersIcon,
   WalletIcon,
   type LucideIcon,
@@ -38,6 +39,7 @@ export const dashboardNav: DashboardNavGroup[] = [
   {
     label: "Business",
     items: [
+      { href: "/dashboard/team", label: "Team", icon: Users2Icon },
       { href: "/dashboard/payouts", label: "Payouts", icon: WalletIcon },
       {
         href: "/dashboard/analytics",

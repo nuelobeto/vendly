@@ -17,11 +17,12 @@ import {
 import { useRegisterMutation } from "@/features/auth/hooks"
 import {
   registerFormSchema,
+  safeNext,
   type RegisterFormInput,
 } from "@/features/auth/schemas"
 import { PasswordStrength } from "@/features/auth/components/password-strength"
 
-function RegisterForm() {
+function RegisterForm({ next }: { next?: string }) {
   const [showPassword, setShowPassword] = React.useState(false)
 
   const form = useForm<RegisterFormInput>({
@@ -49,10 +50,12 @@ function RegisterForm() {
       }
     },
     onSuccess: (data) => {
+      const params = new URLSearchParams({ email: data.email })
+      const target = safeNext(next)
+      if (target) params.set("next", target)
+
       // Full navigation so the success page reads fresh cookies from the proxy.
-      window.location.assign(
-        `/auth/register/success?email=${encodeURIComponent(data.email)}`
-      )
+      window.location.assign(`/auth/register/success?${params.toString()}`)
     },
   })
 

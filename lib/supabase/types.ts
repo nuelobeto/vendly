@@ -84,6 +84,34 @@ export type Database = {
         }
         Relationships: []
       }
+      store_invites: {
+        Row: {
+          id: string
+          store_id: string
+          email: string
+          role: StoreRole
+          token_hash: string
+          invited_by: string
+          expires_at: string
+          accepted_at: string | null
+          accepted_by: string | null
+          revoked_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          email: string
+          role?: StoreRole
+          token_hash: string
+          invited_by: string
+          expires_at?: string
+        }
+        Update: {
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       store_members: {
         Row: {
           id: string
@@ -125,6 +153,44 @@ export type Database = {
       has_store_role: {
         Args: { p_store_id: string; p_roles: StoreRole[] }
         Returns: boolean
+      }
+      get_store_invite: {
+        Args: { p_token_hash: string }
+        Returns: {
+          invite_id: string
+          store_name: string
+          store_slug: string
+          store_logo_url: string | null
+          invite_role: StoreRole
+          invite_email: string
+          invited_by_name: string | null
+          status: string
+        }[]
+      }
+      accept_store_invite: {
+        Args: { p_token_hash: string }
+        Returns: string
+      }
+      has_pending_invite: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      accept_my_invites: {
+        Args: Record<string, never>
+        Returns: number
+      }
+      get_store_team: {
+        Args: { p_store_id: string }
+        Returns: {
+          member_id: string
+          user_id: string
+          member_role: StoreRole
+          first_name: string | null
+          last_name: string | null
+          avatar_url: string | null
+          email: string | null
+          joined_at: string
+        }[]
       }
     }
     Enums: {

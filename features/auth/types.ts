@@ -1,6 +1,8 @@
 export interface IRegister {
   email: string
   password: string
+  /** Relative path to return to after email confirmation. */
+  next?: string
 }
 
 /** Wire format returned by POST /api/auth/register. */

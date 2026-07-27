@@ -33,9 +33,12 @@ import { ImageUpload } from "@/features/onboarding/components/image-upload"
 function ProfileForm({
   userId,
   profile,
+  nextHref = "/onboarding/store",
 }: {
   userId: string
   profile: IProfileRow | null
+  /** Invited teammates skip store setup and go straight to the dashboard. */
+  nextHref?: string
 }) {
   const initialPhone = fromE164(profile?.phone)
 
@@ -73,8 +76,10 @@ function ProfileForm({
         if (target) setError(target, { message })
       }
     },
-    onSuccess: () => {
-      window.location.assign("/onboarding/store")
+    onSuccess: (data) => {
+      // The save may have accepted a pending invite, which settles the
+      // destination more authoritatively than anything computed at render.
+      window.location.assign(data.joinedStore ? "/dashboard" : nextHref)
     },
   })
 

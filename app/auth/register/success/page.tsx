@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>
+  searchParams: Promise<{ email?: string; next?: string }>
 }) {
   const { email } = await searchParams
 

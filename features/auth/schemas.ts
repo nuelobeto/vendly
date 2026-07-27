@@ -21,9 +21,18 @@ export const registerSchema = z.object({
     .regex(/[a-z]/, "Include at least one lowercase letter")
     .regex(/[A-Z]/, "Include at least one uppercase letter")
     .regex(/[0-9]/, "Include at least one number"),
+  // Where to return after confirming — an invite link, typically.
+  next: z.string().optional(),
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>
+
+/** Relative-only, so `next` can never become an open redirect. */
+export function safeNext(value: string | undefined | null) {
+  return value && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : undefined
+}
 
 /**
  * Client-only: adds the confirmation field the API doesn't need. Terms
