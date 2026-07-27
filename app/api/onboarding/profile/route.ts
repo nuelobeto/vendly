@@ -87,8 +87,19 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
+  /*
+   * A user who registered from an invite link has no membership until the
+   * invite is accepted, so up to this point they are indistinguishable from a
+   * brand-new merchant and would be sent to store setup.
+   *
+   * Accepting here is safe because the invite was addressed to this exact
+   * address and the address is verified at signup — an unconfirmed account
+   * cannot reach this route.
+   */
+  const { data: joined } = await supabase.rpc("accept_my_invites")
+
   return NextResponse.json<IProfileResponse>(
-    { ok: true, profile: data },
+    { ok: true, profile: data, joinedStore: (joined ?? 0) > 0 },
     { status: 200 }
   )
 }

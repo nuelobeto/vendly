@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 
 import { getEnv } from "@/lib/env"
 import { createClient } from "@/lib/supabase/server"
-import { registerSchema } from "@/features/auth/schemas"
+import { registerSchema, safeNext } from "@/features/auth/schemas"
 import type { IRegisterResponse } from "@/features/auth/types"
 
 export async function POST(request: NextRequest) {
@@ -35,13 +35,26 @@ export async function POST(request: NextRequest) {
   }
 
   const { email, password } = parsed.data
+
+  /*
+   * Round-trips the return path through the confirmation email so an invited
+   * teammate lands back on their invite instead of the default onboarding.
+   * Relative-only — safeNext drops anything that could be an open redirect.
+   *
+   * NOTE: the resulting URL carries a query string, so Supabase's redirect
+   * allow-list needs a wildcard entry (e.g. http://localhost:3000/**) rather
+   * than the bare /api/auth/confirm path.
+   */
+  const next = safeNext(parsed.data.next)
+  const confirmUrl = new URL("/api/auth/confirm", getEnv().NEXT_PUBLIC_SITE_URL)
+  if (next) confirmUrl.searchParams.set("next", next)
   const supabase = await createClient()
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${getEnv().NEXT_PUBLIC_SITE_URL}/api/auth/confirm`,
+      emailRedirectTo: confirmUrl.toString(),
     },
   })
 

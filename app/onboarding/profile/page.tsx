@@ -25,15 +25,28 @@ export default async function Page() {
     redirect("/auth/login?next=/onboarding/profile")
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle()
+  const [{ data: profile }, { data: membership }, { data: pendingInvite }] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase
+        .from("store_members")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase.rpc("has_pending_invite"),
+    ])
+
+  /*
+   * A freshly-registered invitee has no membership yet — the invite is only
+   * accepted when this step is saved. Keying off membership alone would send
+   * them to store setup, which is exactly what an invite is not.
+   */
+  const isTeammate = !!membership || pendingInvite === true
+  const nextHref = isTeammate ? "/dashboard" : "/onboarding/store"
 
   return (
     <Reveal onMount className="w-full max-w-lg">
-      <OnboardingSteps current="profile" />
+      {isTeammate ? null : <OnboardingSteps current="profile" />}
 
       <div className="mt-8 text-center">
         <h1 className="font-heading text-3xl font-semibold tracking-tight">
@@ -46,7 +59,11 @@ export default async function Page() {
       </div>
 
       <div className="mt-8">
-        <ProfileForm userId={user.id} profile={profile ?? null} />
+        <ProfileForm
+          userId={user.id}
+          profile={profile ?? null}
+          nextHref={nextHref}
+        />
       </div>
     </Reveal>
   )

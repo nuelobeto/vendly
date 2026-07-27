@@ -25,6 +25,30 @@ export default async function Page() {
     redirect("/auth/login?next=/onboarding/store")
   }
 
+  /*
+   * An invited teammate already belongs to a store. Sending them through store
+   * setup would have them create a second one, which is never what an invite
+   * meant — so bounce them straight to the dashboard.
+   */
+  const [{ data: membership }, { data: pendingInvite }] = await Promise.all([
+    supabase
+      .from("store_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase.rpc("has_pending_invite"),
+  ])
+
+  if (membership && membership.role !== "owner") {
+    redirect("/dashboard")
+  }
+
+  // Invited but not yet accepted: the profile step accepts the invite, so send
+  // them there rather than letting them create a store they don't want.
+  if (!membership && pendingInvite === true) {
+    redirect("/onboarding/profile")
+  }
+
   const { data: store } = await supabase
     .from("stores")
     .select("*")

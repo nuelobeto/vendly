@@ -27,14 +27,31 @@ export default async function DashboardLayout({
     redirect("/auth/login?next=/dashboard")
   }
 
-  const [{ data: profile }, { data: store }] = await Promise.all([
+  /*
+   * Resolved through store_members, not stores.owner_id. An invited teammate
+   * belongs to a store they don't own — keying off ownership would bounce them
+   * into onboarding and have them create a second store.
+   */
+  const [{ data: profile }, { data: membership }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("stores").select("*").eq("owner_id", user.id).maybeSingle(),
+    supabase
+      .from("store_members")
+      .select("role, stores(*)")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ])
 
-  // No store means onboarding never finished; the shell has nothing to frame.
+  const store = Array.isArray(membership?.stores)
+    ? membership?.stores[0]
+    : membership?.stores
+
   if (!store) {
-    redirect("/onboarding/store")
+    // An unaccepted invite means they're a teammate mid-onboarding, not a
+    // merchant who still needs to create a store.
+    const { data: pendingInvite } = await supabase.rpc("has_pending_invite")
+    redirect(
+      pendingInvite === true ? "/onboarding/profile" : "/onboarding/store"
+    )
   }
 
   // Read the persisted sidebar state on the server so the first paint matches

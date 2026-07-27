@@ -11,7 +11,12 @@ export interface IProfile {
 }
 
 export type IProfileResponse =
-  | { ok: true; profile: IProfileRow }
+  | {
+      ok: true
+      profile: IProfileRow
+      /** True when a pending invite was accepted as part of this save. */
+      joinedStore?: boolean
+    }
   | { ok: false; error: string; fieldErrors?: Record<string, string> }
 
 export type IProfileSuccess = Extract<IProfileResponse, { ok: true }>

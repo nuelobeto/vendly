@@ -10,7 +10,15 @@ export const metadata: Metadata = {
     "Start selling on Vendly. Create your merchant account in under a minute.",
 }
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>
+}) {
+  // Carried through registration and the confirmation email so an invited
+  // teammate returns to their invite instead of the default onboarding.
+  const { next } = await searchParams
+
   return (
     <Reveal onMount className="w-full max-w-md">
       <div className="flex flex-col gap-2 text-center">
@@ -24,7 +32,7 @@ export default function Page() {
       </div>
 
       <div className="mt-8">
-        <RegisterForm />
+        <RegisterForm next={next} />
       </div>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
