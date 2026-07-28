@@ -11,6 +11,8 @@ export type OnboardingStep = "profile" | "store" | "complete"
 
 export type StoreRole = "owner" | "admin" | "staff"
 
+export type ProductStatus = "draft" | "active" | "archived"
+
 export type Database = {
   public: {
     Tables: {
@@ -81,6 +83,155 @@ export type Database = {
           contact_email?: string | null
           contact_phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          id: string
+          store_id: string
+          title: string
+          handle: string
+          description_html: string | null
+          vendor: string
+          product_type: string | null
+          status: ProductStatus
+          is_gift_card: boolean
+          seo_title: string | null
+          seo_description: string | null
+          featured_image_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          title: string
+          handle: string
+          description_html?: string | null
+          vendor?: string
+          product_type?: string | null
+          status?: ProductStatus
+          is_gift_card?: boolean
+          seo_title?: string | null
+          seo_description?: string | null
+          featured_image_url?: string | null
+        }
+        Update: {
+          title?: string
+          handle?: string
+          description_html?: string | null
+          vendor?: string
+          product_type?: string | null
+          status?: ProductStatus
+          is_gift_card?: boolean
+          seo_title?: string | null
+          seo_description?: string | null
+          featured_image_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_options: {
+        Row: {
+          id: string
+          product_id: string
+          name: string
+          values: string[]
+          position: number
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          name: string
+          values: string[]
+          position: number
+        }
+        Update: { name?: string; values?: string[]; position?: number }
+        Relationships: []
+      }
+      product_images: {
+        Row: {
+          id: string
+          product_id: string
+          url: string
+          alt_text: string | null
+          position: number
+          storage_key: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          url: string
+          alt_text?: string | null
+          position?: number
+          storage_key?: string | null
+        }
+        Update: {
+          url?: string
+          alt_text?: string | null
+          position?: number
+          storage_key?: string | null
+        }
+        Relationships: []
+      }
+      /**
+       * `cost_per_item` is intentionally absent from Row: the database revokes
+       * SELECT on that column, so a client read never returns it. Use the
+       * get_variant_costs RPC instead.
+       */
+      product_variants: {
+        Row: {
+          id: string
+          product_id: string
+          title: string
+          options: string[]
+          image_id: string | null
+          sku: string | null
+          barcode: string | null
+          price: number
+          compare_at_price: number | null
+          inventory_quantity: number
+          continue_selling_when_out_of_stock: boolean
+          requires_shipping: boolean
+          weight: number
+          weight_unit: string
+          hs_code: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          options?: string[]
+          image_id?: string | null
+          sku?: string | null
+          barcode?: string | null
+          price: number
+          compare_at_price?: number | null
+          cost_per_item?: number | null
+          inventory_quantity?: number
+          continue_selling_when_out_of_stock?: boolean
+          requires_shipping?: boolean
+          weight?: number
+          weight_unit?: string
+          hs_code?: string | null
+        }
+        Update: {
+          options?: string[]
+          image_id?: string | null
+          sku?: string | null
+          barcode?: string | null
+          price?: number
+          compare_at_price?: number | null
+          cost_per_item?: number | null
+          inventory_quantity?: number
+          continue_selling_when_out_of_stock?: boolean
+          requires_shipping?: boolean
+          weight?: number
+          weight_unit?: string
+          hs_code?: string | null
         }
         Relationships: []
       }
@@ -179,6 +330,34 @@ export type Database = {
         Args: Record<string, never>
         Returns: number
       }
+      create_product: {
+        Args: { p_store_id: string; p_payload: Record<string, unknown> }
+        Returns: string
+      }
+      generate_product_handle: {
+        Args: { p_store_id: string; p_title: string }
+        Returns: string
+      }
+      save_product_variants: {
+        Args: {
+          p_product_id: string
+          p_options: unknown
+          p_variants: unknown
+        }
+        Returns: undefined
+      }
+      get_variant_costs: {
+        Args: { p_product_id: string }
+        Returns: { variant_id: string; cost_per_item: number | null }[]
+      }
+      can_read_product: {
+        Args: { p_product_id: string }
+        Returns: boolean
+      }
+      can_write_product: {
+        Args: { p_product_id: string }
+        Returns: boolean
+      }
       get_store_team: {
         Args: { p_store_id: string }
         Returns: {
@@ -197,6 +376,7 @@ export type Database = {
       currency: Currency
       onboarding_step: OnboardingStep
       store_role: StoreRole
+      product_status: ProductStatus
     }
     CompositeTypes: Record<never, never>
   }
